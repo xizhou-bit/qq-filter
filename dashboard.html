@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>qq-filter</title>
+<style>
+  :root {
+    --primary: #0ea5e9;
+    --primary-hover: #0284c7;
+    --background: #f4f7fb;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --muted-foreground: #64748b;
+    --accent: #f1f5f9;
+    --destructive: #ef4444;
+    --warning-bg: #fff7e6;
+    --warning-border: #ffd591;
+    --radius: 12px;
+    --shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 1px 3px rgba(15, 23, 42, .08);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  .app { display: flex; height: 100vh; }
+  .sidebar {
+    width: 232px;
+    flex-shrink: 0;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+  .brand { padding: 18px 18px 14px; border-bottom: 1px solid var(--border); }
+  .brand-title { font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+  .brand-sub { font-size: 11px; color: var(--muted-foreground); margin-top: 2px; }
+  .sidebar nav { flex: 1; padding: 10px 8px; overflow-y: auto; }
+  .nav-item {
+    display: block;
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: #334155;
+    font-size: 13px;
+    cursor: pointer;
+    margin-bottom: 2px;
+    user-select: none;
+  }
+  .nav-item:hover { background: var(--accent); }
+  .nav-item.active { background: rgba(14, 165, 233, .12); color: #0284c7; font-weight: 500; }
+  .sidebar-foot { padding: 12px 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted-foreground); }
+  .content { flex: 1; overflow-y: auto; padding: 24px; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 18px;
+    margin-bottom: 18px;
+    max-width: 1080px;
+  }
+  .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .panel-head h2, .panel h2 { margin: 0 0 12px; font-size: 15px; font-weight: 600; }
+  .panel-head h2 { margin: 0; }
+  .msg { border-bottom: 1px solid var(--border); padding: 10px 0; }
+  .msg:last-child { border-bottom: none; }
+  .msg .text { font-weight: 500; }
+  .meta { color: var(--muted-foreground); font-size: 12px; margin-top: 2px; }
+  .deadline { color: var(--destructive); font-size: 13px; margin-top: 2px; }
+  .empty { color: var(--muted-foreground); font-size: 13px; padding: 8px 0; }
+  label { display: block; margin: 10px 0 4px; font-size: 13px; color: #334155; }
+  input, select, textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--card);
+    color: var(--foreground);
+  }
+  input[readonly] { background: var(--accent); color: var(--muted-foreground); }
+  textarea { resize: vertical; min-height: 70px; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14, 165, 233, .15); }
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 8px;
+    background: var(--primary);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { background: var(--primary-hover); }
+  button:disabled { background: #cbd5e1; cursor: not-allowed; }
+  button.secondary { background: var(--accent); color: var(--foreground); border: 1px solid var(--border); }
+  button.secondary:hover { background: #e2e8f0; }
+  button.danger { background: transparent; color: var(--destructive); border: 1px solid var(--border); }
+  button.danger:hover { background: #fef2f2; }
+  button.small { padding: 3px 9px; font-size: 12px; border-radius: 6px; }
+  .button-link {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 8px 14px; border-radius: 8px; background: var(--accent);
+    color: var(--foreground); border: 1px solid var(--border);
+    font-size: 13px; font-weight: 500; text-decoration: none;
+  }
+  .button-link:hover { background: #e2e8f0; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; }
+  .row > div { flex: 1; min-width: 180px; }
+  .actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .hint { color: var(--muted-foreground); font-size: 12px; margin-top: 4px; }
+  .warn {
+    background: var(--warning-bg);
+    border: 1px solid var(--warning-border);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    color: #92400e;
+    margin-top: 8px;
+  }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 3px 8px 3px 10px;
+    font-size: 12px;
+  }
+  .chip .rm { cursor: pointer; color: var(--muted-foreground); font-weight: 700; }
+  .chip .rm:hover { color: var(--destructive); }
+  .checkbox { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 13px; color: #334155; }
+  .checkbox input { width: auto; }
+  .secret-row { margin-bottom: 10px; }
+  .secret-row label { margin: 0 0 4px; }
+  .secret-input { display: flex; gap: 6px; align-items: center; }
+  .secret-input input { flex: 1; }
+  .secret-input button { flex-shrink: 0; }
+  .cfg-badge {
+    display: inline-block; margin-left: 6px; padding: 0 7px;
+    background: #dcfce7; color: #15803d; border-radius: 999px;
+    font-size: 11px; line-height: 18px; vertical-align: middle;
+  }
+  .status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #94a3b8; margin-left: 8px; vertical-align: middle; }
+  .status-dot.big { width: 13px; height: 13px; margin-left: 0; margin-right: 8px; }
+  .snow-state { display: flex; align-items: center; font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .logbox {
+    background: #0f172a; color: #d1fae5; font-size: 12px; line-height: 1.5;
+    border-radius: 8px; padding: 10px 12px; max-height: 220px; overflow-y: auto;
+    white-space: pre-wrap; word-break: break-all; margin-top: 12px;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  .info-wrap { position: relative; display: inline-flex; }
+  .info-btn {
+    width: 24px; height: 24px; padding: 0; border-radius: 50%;
+    background: transparent; color: var(--muted-foreground);
+    border: 1px solid var(--border); font-size: 13px; line-height: 20px;
+    cursor: pointer;
+  }
+  .info-btn:hover, .info-btn:focus { color: #0284c7; border-color: var(--primary); outline: none; }
+  .tip {
+    position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+    width: min(300px, calc(100vw - 40px)); background: #0f172a; color: #fff;
+    font-size: 12px; line-height: 1.6; padding: 9px 11px; border-radius: 8px;
+    display: none; z-index: 60; white-space: normal; text-align: left;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .28);
+  }
+  .info-wrap.show .tip, .info-wrap.open .tip { display: block; }
+  .toast {
+    position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
+    background: #0f172a; color: #fff; padding: 9px 16px; border-radius: 8px;
+    font-size: 13px; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, .45);
+    display: none; align-items: center; justify-content: center; z-index: 50;
+  }
+  .overlay.show { display: flex; }
+  .modal {
+    background: var(--card); border-radius: var(--radius); width: min(480px, calc(100vw - 32px));
+    max-height: 80vh; display: flex; flex-direction: column; overflow: hidden;
+  }
+  .modal header { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); }
+  .modal header h3 { margin: 0; font-size: 15px; }
+  .modal .body { padding: 8px 16px 16px; overflow-y: auto; }
+  .sender-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .sender-row:last-child { border-bottom: none; }
+  .sender-row .who { display: flex; flex-direction: column; }
+  .sender-row .who b { font-size: 13px; }
+  .sender-row .who span { font-size: 12px; color: var(--muted-foreground); }
+  .groupbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .groupbar select { flex: 1; min-width: 160px; }
+  .inline-new { display: none; gap: 8px; margin-bottom: 12px; }
+  .inline-new.show { display: flex; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-title">qq-filter</div>
+      <div class="brand-sub">QQ群重要消息过滤 · 本地看板</div>
+    </div>
+    <nav>
+      <a class="nav-item" data-view="view-snow" onclick="switchView('view-snow', this)">SnowLuma 连接</a>
+      <a class="nav-item" data-view="view-messages" onclick="switchView('view-messages', this)">消息</a>
+      <a class="nav-item" data-view="view-groups" onclick="switchView('view-groups', this)">群聊设置</a>
+      <a class="nav-item" data-view="view-global" onclick="switchView('view-global', this)">全局设置</a>
+      <a class="nav-item" data-view="view-model" onclick="switchView('view-model', this)">模型</a>
+      <a class="nav-item" data-view="view-push" onclick="switchView('view-push', this)">消息提醒</a>
+    </nav>
+    <div class="sidebar-foot">配置与密钥保存后自动生效</div>
+  </aside>
+
+  <main class="content">
+
+    <section class="view" id="view-snow">
+      <div class="panel">
+        <h2>SnowLuma 连接</h2>
+        <div class="snow-state">
+          <span class="status-dot big" id="snow-dot"></span>
+          <span id="snow-state-text" style="color:#94a3b8;">检测中…</span>
+        </div>
+        <div class="hint" id="snow-hint"></div>
+        <label>SnowLuma 目录（含 launcher.bat）</label>
+        <input id="snow-path" placeholder="如 C:\tools\SnowLuma">
+        <div class="actions">
+          <button onclick="saveSnowPath()">保存路径</button>
+          <button id="btn-start-snow" class="secondary" onclick="startSnow()">启动 SnowLuma</button>
+          <button class="secondary" onclick="loadSnowStatus()">重新检测</button>
+          <a class="button-link" href="http://127.0.0.1:5099" target="_blank" rel="noopener">打开 SnowLuma 控制台</a>
+        </div>
+        <div class="actions">
+          <button id="btn-stop-snow" class="secondary" onclick="stopSnow()">停止监听</button>
+          <span class="info-wrap">
+            <button type="button" class="info-btn" aria-label="停止监听说明">ⓘ</button>
+            <span class="tip" role="tooltip">停止监听：只关闭 SnowLuma，不再接收新 QQ 消息；看板仍在运行，历史重要消息仍可查看，随时可点启动恢复。关浏览器标签不会停止监听。</span>
+          </span>
+          <button class="danger" onclick="exitSnow()">退出看板</button>
+          <span class="info-wrap">
+            <button type="button" class="info-btn" aria-label="退出看板说明">ⓘ</button>
+            <span class="tip" role="tooltip">退出看板：先关闭 SnowLuma，再停止看板服务；历史消息已存文件，下次启动仍可查看。关浏览器标签不会退出看板。</span>
+          </span>
+        </div>
+        <div class="checkbox"><input type="checkbox" id="ch-close-snow" onchange="saveCloseSnowToggle()"> 退出时一起关闭 SnowLuma（含手动开的）</div>
+        <div class="hint">登录后重新载入 QQ 进程，回来本页会自动检测。</div>
+        <div class="hint" id="snow-launcher"></div>
+        <pre class="logbox" id="snow-log">（暂无日志）</pre>
+      </div>
+    </section>
+
+    <section class="view" id="view-messages">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>消息 <span id="msg-status-dot" class="status-dot" title=""></span></h2>
+          <button class="secondary small" onclick="loadMessages()">刷新</button>
+        </div>
+        <div id="messages" class="empty">加载中…</div>
+      </div>
+    </section>
+
+    <section class="view" id="view-groups">
+      <div class="panel">
+        <h2>群聊设置</h2>
+        <div class="groupbar">
+          <select id="group-select" onchange="onGroupChange()"></select>
+          <button class="secondary small" onclick="toggleNewGroup()">新建群</button>
+          <button class="secondary small" onclick="toggleGroupEnabled()">停用/启用</button>
+          <button class="danger small" onclick="deleteGroup()">删除</button>
+        </div>
+        <div class="inline-new" id="new-group-form">
+          <input id="new-group-id" type="number" placeholder="群 QQ 号">
+          <input id="new-group-name" placeholder="显示名（如：测试群）">
+          <button onclick="createGroup()">确认新建</button>
+          <button class="secondary" onclick="toggleNewGroup()">取消</button>
+        </div>
+        <div class="row">
+          <div>
+            <label>显示名</label>
+            <input id="g-name">
+          </div>
+          <div>
+            <label>模式</label>
+            <select id="g-mode">
+              <option value="keyword">关键词模式</option>
+              <option value="full_ai">全量 AI 模式</option>
+            </select>
+            <div class="hint" id="full-ai-warn" style="display:none;color:#92400e;">全量模式会把闲聊也发给模型商，敏感群请用关键词模式。</div>
+          </div>
+        </div>
+        <label>自定义关键词（英文逗号分隔）</label>
+        <textarea id="g-keywords"></textarea>
+        <label>重要发言人</label>
+        <div class="chips" id="g-important"></div>
+        <div class="actions" style="margin-top:6px;">
+          <input id="g-important-add" type="number" placeholder="输入 QQ 号" style="max-width:180px;">
+          <button class="secondary small" onclick="addSender('important')">添加</button>
+          <button class="secondary small" onclick="openPicker('important')">从近期消息点选</button>
+        </div>
+        <label>屏蔽发言人</label>
+        <div class="chips" id="g-muted"></div>
+        <div class="actions" style="margin-top:6px;">
+          <input id="g-muted-add" type="number" placeholder="输入 QQ 号" style="max-width:180px;">
+          <button class="secondary small" onclick="addSender('muted')">添加</button>
+          <button class="secondary small" onclick="openPicker('muted')">从近期消息点选</button>
+        </div>
+        <div class="actions"><button onclick="saveGroup()">保存群聊设置</button></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-global">
+      <div class="panel">
+        <h2>全局设置（发言人）</h2>
+        <div class="row">
+          <div>
+            <label>全局重要发言人</label>
+            <div class="chips" id="global-important"></div>
+            <div class="actions" style="margin-top:6px;">
+              <input id="global-important-add" type="number" placeholder="输入 QQ 号" style="max-width:180px;">
+              <button class="secondary small" onclick="addGlobalSender('important')">添加</button>
+              <button class="secondary small" onclick="openGlobalPicker('important')">从近期消息点选</button>
+            </div>
+          </div>
+          <div>
+            <label>全局屏蔽发言人</label>
+            <div class="chips" id="global-muted"></div>
+            <div class="actions" style="margin-top:6px;">
+              <input id="global-muted-add" type="number" placeholder="输入 QQ 号" style="max-width:180px;">
+              <button class="secondary small" onclick="addGlobalSender('muted')">添加</button>
+              <button class="secondary small" onclick="openGlobalPicker('muted')">从近期消息点选</button>
+            </div>
+          </div>
+        </div>
+        <div class="actions"><button onclick="saveGlobal()">保存全局设置</button></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-model">
+      <div class="panel">
+        <h2>模型</h2>
+        <div class="row">
+          <div>
+            <label>提供商</label>
+            <select id="m-provider" onchange="onProviderChange()">
+              <option value="deepseek">DeepSeek</option>
+              <option value="openai_compatible">自定义 OpenAI 兼容</option>
+            </select>
+          </div>
+          <div>
+            <label>模型</label>
+            <select id="m-model-select"></select>
+            <input id="m-model" placeholder="如 gpt-4o-mini" style="display:none;">
+          </div>
+        </div>
+        <label>接口地址</label>
+        <input id="m-base-url" readonly>
+        <div class="hint" id="m-base-hint"></div>
+        <div class="actions"><button onclick="saveModel()">保存模型设置</button></div>
+      </div>
+      <div class="panel">
+        <h2>模型密钥</h2>
+        <div class="secret-row">
+          <label>DeepSeek API Key <span class="cfg-badge" data-badge="DEEPSEEK_API_KEY" hidden>已配置</span></label>
+          <div class="secret-input">
+            <input type="password" data-key="DEEPSEEK_API_KEY" data-sensitive="1" placeholder="未配置">
+            <button class="secondary small" data-eye="DEEPSEEK_API_KEY" hidden onclick="toggleSecretReveal('DEEPSEEK_API_KEY', this)">显示</button>
+            <button class="danger small" onclick="clearSecret('DEEPSEEK_API_KEY')">清除</button>
+          </div>
+        </div>
+        <div class="secret-row">
+          <label>OpenAI API Key <span class="cfg-badge" data-badge="OPENAI_API_KEY" hidden>已配置</span></label>
+          <div class="secret-input">
+            <input type="password" data-key="OPENAI_API_KEY" data-sensitive="1" placeholder="未配置">
+            <button class="secondary small" data-eye="OPENAI_API_KEY" hidden onclick="toggleSecretReveal('OPENAI_API_KEY', this)">显示</button>
+            <button class="danger small" onclick="clearSecret('OPENAI_API_KEY')">清除</button>
+          </div>
+        </div>
+        <div class="actions"><button onclick="saveSecrets()">保存密钥</button></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-push">
+      <div class="panel">
+        <h2>消息提醒</h2>
+        <div class="checkbox"><input type="checkbox" id="ch-wxpusher" onchange="syncChannelCheckbox()"> WxPusher App（首选）</div>
+        <div class="checkbox"><input type="checkbox" id="ch-qq" onchange="syncChannelCheckbox()"> 小号 QQ 私聊发自己（默认关闭，手动打开，只发自己，绝不发群）</div>
+        <div class="checkbox"><input type="checkbox" id="ch-email" onchange="syncChannelCheckbox()"> 邮件</div>
+        <div class="checkbox"><input type="checkbox" id="ch-local" onchange="syncChannelCheckbox()"> 只看本地，不推</div>
+        <div class="row">
+          <div>
+            <label>批量间隔（分钟）</label>
+            <input id="p-batch" type="number" min="1" max="1440" value="60">
+            <div class="hint">攒够时间一次性推一条摘要，没消息不推。</div>
+          </div>
+          <div>
+            <label>夜间静默</label>
+            <div class="checkbox" style="margin-top:0;"><input type="checkbox" id="p-quiet-enabled"> 开启静默</div>
+            <div class="row" style="gap:8px;">
+              <input id="p-quiet-start" type="time" value="23:00" style="flex:1;min-width:0;">
+              <span style="color:var(--muted-foreground);">至</span>
+              <input id="p-quiet-end" type="time" value="08:00" style="flex:1;min-width:0;">
+            </div>
+            <div class="hint">紧急消息不等批量，立即推。</div>
+          </div>
+        </div>
+        <div class="actions"><button onclick="savePush()">保存消息提醒设置</button> <button class="secondary" onclick="testPush()">发一条测试提醒</button></div>
+      </div>
+      <div class="panel">
+        <h2>消息提醒密钥</h2>
+        <div class="secret-row">
+          <label>WxPusher AppToken <span class="cfg-badge" data-badge="WXPUSHER_APP_TOKEN" hidden>已配置</span></label>
+          <div class="secret-input">
+            <input type="password" data-key="WXPUSHER_APP_TOKEN" data-sensitive="1" placeholder="未配置">
+            <button class="secondary small" data-eye="WXPUSHER_APP_TOKEN" hidden onclick="toggleSecretReveal('WXPUSHER_APP_TOKEN', this)">显示</button>
+            <button class="danger small" onclick="clearSecret('WXPUSHER_APP_TOKEN')">清除</button>
+          </div>
+        </div>
+        <div class="secret-row">
+          <label>WxPusher UID</label>
+          <div class="secret-input">
+            <input type="text" data-key="WXPUSHER_UID" data-sensitive="0" placeholder="未配置">
+            <button class="danger small" onclick="clearSecret('WXPUSHER_UID')">清除</button>
+          </div>
+        </div>
+        <div class="secret-row">
+          <label>自己 QQ 号（SELF_QQ，私聊只发它）</label>
+          <div class="secret-input">
+            <input type="text" data-key="SELF_QQ" data-sensitive="0" placeholder="未配置">
+            <button class="danger small" onclick="clearSecret('SELF_QQ')">清除</button>
+          </div>
+        </div>
+        <div class="secret-row">
+          <label>发件邮箱</label>
+          <div class="secret-input">
+            <input type="text" data-key="SMTP_USER" data-sensitive="0" placeholder="如 yourname@qq.com">
+            <button class="danger small" onclick="clearSecret('SMTP_USER')">清除</button>
+          </div>
+        </div>
+        <div class="secret-row">
+          <label>邮箱密码 / 授权码 <span class="cfg-badge" data-badge="SMTP_PASS" hidden>已配置</span></label>
+          <div class="secret-input">
+            <input type="password" data-key="SMTP_PASS" data-sensitive="1" placeholder="未配置">
+            <button class="secondary small" data-eye="SMTP_PASS" hidden onclick="toggleSecretReveal('SMTP_PASS', this)">显示</button>
+            <button class="danger small" onclick="clearSecret('SMTP_PASS')">清除</button>
+          </div>
+        </div>
+        <div class="secret-row">
+          <label>收件邮箱</label>
+          <div class="secret-input">
+            <input type="text" data-key="MAIL_TO" data-sensitive="0" placeholder="未配置">
+            <button class="danger small" onclick="clearSecret('MAIL_TO')">清除</button>
+          </div>
+        </div>
+        <div class="actions"><button onclick="saveSecrets()">保存密钥</button></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div class="overlay" id="picker-overlay">
+  <div class="modal">
+    <header>
+      <h3>从近期消息点选发言人</h3>
+      <button class="secondary small" onclick="closePicker()">关闭</button>
+    </header>
+    <div class="body" id="picker-body"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let config = null;
+let currentGroupId = null;
+let pickerTarget = null;
+let pickerGlobal = false;
+
+const PROVIDER_ADDR = { deepseek: 'https://api.deepseek.com/chat/completions' };
+const PROVIDER_MODELS = { deepseek: ['deepseek-flash', 'deepseek-v4-pro'] };
+const CUSTOM_DEFAULT_ADDR = 'https://api.openai.com/v1/chat/completions';
+const MASK = '••••••';
+const secretDirty = new Set();
+let autoOpenSnow = false;
+
+async function api(path, options) {
+  const res = await fetch(path, options);
+  if (!res.ok) throw new Error(path + ' ' + res.status);
+  return res.json();
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function switchView(viewId, el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById(viewId).classList.add('active');
+}
+
+async function loadMessages() {
+  try {
+    const data = await api('/api/messages');
+    const box = document.getElementById('messages');
+    const msgs = (data.messages || []).slice().sort((a,b) => (b.time||'').localeCompare(a.time||''));
+    if (!msgs.length) { box.innerHTML = '<div class="empty">今天暂无重要消息</div>'; return; }
+    const now = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'});
+    box.innerHTML = msgs.map(m => {
+      const gname = groupName(m.group_id);
+      const meta = [m.time, gname, m.coarse_reason, m.sender_name || ('QQ '+m.sender_id)].filter(Boolean).join(' · ');
+      const dline = [m.deadline ? '截止：'+m.deadline : '', m.location ? '地点：'+m.location : '', m.action ? '要做：'+m.action : ''].filter(Boolean).join(' ｜ ');
+      return `<div class="msg">
+        <div class="text">${escapeHtml(m.text)}</div>
+        <div class="meta">${escapeHtml(meta)}</div>
+        ${dline ? `<div class="deadline">${escapeHtml(dline)}</div>` : ''}
+      </div>`;
+    }).join('') + `<div class="hint">更新于 ${now}</div>`;
+  } catch (e) {
+    document.getElementById('messages').innerHTML = '<div class="empty">加载失败：'+escapeHtml(e.message)+'</div>';
+  }
+}
+
+function groupName(id) {
+  const g = (config?.groups || []).find(x => x.id === id);
+  return g ? (g.name || ('群'+id)) : ('群'+id);
+}
+
+function currentGroup() {
+  return (config.groups || []).find(g => g.id === currentGroupId);
+}
+
+function renderGroups() {
+  const sel = document.getElementById('group-select');
+  const groups = config.groups || [];
+  sel.innerHTML = groups.map(g =>
+    `<option value="${g.id}" ${g.id === currentGroupId ? 'selected' : ''}>${escapeHtml(g.name || ('群'+g.id))}${g.enabled ? '' : '（已停用）'}</option>`
+  ).join('');
+  if (!groups.length) {
+    sel.innerHTML = '<option value="">（暂无群，点“新建群”添加）</option>';
+    currentGroupId = null;
+  } else if (!groups.find(g => g.id === currentGroupId)) {
+    currentGroupId = groups[0].id;
+    sel.value = String(currentGroupId);
+  }
+  renderGroupForm();
+}
+
+function renderGroupForm() {
+  const g = currentGroup();
+  if (!g) {
+    ['g-name','g-keywords','g-important-add','g-muted-add'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('g-mode').value = 'keyword';
+    document.getElementById('g-important').innerHTML = '';
+    document.getElementById('g-muted').innerHTML = '';
+    document.getElementById('full-ai-warn').style.display = 'none';
+    return;
+  }
+  document.getElementById('g-name').value = g.name || '';
+  document.getElementById('g-mode').value = g.mode || 'keyword';
+  document.getElementById('g-keywords').value = (g.keywords || []).join(', ');
+  document.getElementById('full-ai-warn').style.display = g.mode === 'full_ai' ? 'block' : 'none';
+  renderChips('g-important', g.important_senders || []);
+  renderChips('g-muted', g.muted_senders || []);
+}
+
+function renderChips(id, list) {
+  document.getElementById(id).innerHTML = list.map(qq =>
+    `<span class="chip">${escapeHtml(qq)} <span class="rm" onclick="removeChip('${id}',${qq})">×</span></span>`
+  ).join('') || '<span class="hint">（暂无）</span>';
+}
+
+function removeChip(id, qq) {
+  const g = currentGroup();
+  if (!g) return;
+  const key = id === 'g-important' ? 'important_senders' : 'muted_senders';
+  g[key] = (g[key] || []).filter(x => x !== qq);
+  renderChips(id, g[key]);
+}
+
+function addSender(kind) {
+  const g = currentGroup();
+  if (!g) { toast('请先新建/选择一个群'); return; }
+  const el = document.getElementById('g-' + kind + '-add');
+  const qq = parseInt(el.value, 10);
+  if (!qq) { toast('请输入有效 QQ 号'); return; }
+  const key = kind === 'important' ? 'important_senders' : 'muted_senders';
+  if (!g[key].includes(qq)) g[key].push(qq);
+  el.value = '';
+  renderChips('g-' + kind, g[key]);
+}
+
+async function openPicker(kind) {
+  if (!currentGroup()) { toast('请先新建/选择一个群'); return; }
+  pickerTarget = kind;
+  pickerGlobal = false;
+  await loadPicker();
+}
+
+async function openGlobalPicker(kind) {
+  pickerTarget = kind;
+  pickerGlobal = true;
+  await loadPicker();
+}
+
+async function loadPicker() {
+  const body = document.getElementById('picker-body');
+  body.innerHTML = '<div class="hint">加载中…</div>';
+  document.getElementById('picker-overlay').classList.add('show');
+  try {
+    const url = pickerGlobal ? '/api/recent-senders' : ('/api/recent-senders?group_id=' + currentGroupId);
+    const data = await api(url);
+    const senders = data.senders || [];
+    if (!senders.length) { body.innerHTML = '<div class="hint">近期消息里还没有发言人，先让群里有消息，或直接手动输入 QQ 号。</div>'; return; }
+    body.innerHTML = senders.map(s => `
+      <div class="sender-row">
+        <div class="who"><b>${escapeHtml(s.sender_name)}</b><span>QQ ${escapeHtml(s.sender_id)}</span></div>
+        <div style="display:flex;gap:6px;">
+          <button class="small" onclick="pickSender(${s.sender_id},'important')">+重要</button>
+          <button class="small secondary" onclick="pickSender(${s.sender_id},'muted')">+屏蔽</button>
+        </div>
+      </div>`).join('');
+  } catch (e) {
+    body.innerHTML = '<div class="hint">加载失败：'+escapeHtml(e.message)+'</div>';
+  }
+}
+
+function pickSender(qq, kind) {
+  const key = kind === 'important' ? 'important_senders' : 'muted_senders';
+  if (pickerGlobal) {
+    if (!config.global[key].includes(qq)) config.global[key].push(qq);
+  } else {
+    const g = currentGroup();
+    if (g && !g[key].includes(qq)) g[key].push(qq);
+  }
+  closePicker();
+  if (pickerGlobal) renderGlobalSenders(); else renderGroupForm();
+  toast('已加入' + (kind === 'important' ? '重要' : '屏蔽') + '发言人，记得保存');
+}
+
+function closePicker() { document.getElementById('picker-overlay').classList.remove('show'); }
+
+async function saveGroup() {
+  const g = currentGroup();
+  if (!g) { toast('请先新建/选择一个群'); return; }
+  g.name = document.getElementById('g-name').value.trim() || ('群' + g.id);
+  g.mode = document.getElementById('g-mode').value;
+  g.keywords = document.getElementById('g-keywords').value.split(/[,，、\n]/).map(s => s.trim()).filter(Boolean);
+  await putConfig();
+}
+
+function renderGlobalSenders() {
+  renderChips('global-important', config.global.important_senders || []);
+  renderChips('global-muted', config.global.muted_senders || []);
+}
+
+function addGlobalSender(kind) {
+  const el = document.getElementById('global-' + kind + '-add');
+  const qq = parseInt(el.value, 10);
+  if (!qq) { toast('请输入有效 QQ 号'); return; }
+  const key = kind === 'important' ? 'important_senders' : 'muted_senders';
+  if (!config.global[key].includes(qq)) config.global[key].push(qq);
+  el.value = '';
+  renderGlobalSenders();
+}
+
+async function saveGlobal() { await putConfig(); }
+
+function renderModel() {
+  const provider = (config.model.provider === 'openai_compatible') ? 'openai_compatible' : 'deepseek';
+  document.getElementById('m-provider').value = provider;
+  const modelSel = document.getElementById('m-model-select');
+  const modelInp = document.getElementById('m-model');
+  const base = document.getElementById('m-base-url');
+  const hint = document.getElementById('m-base-hint');
+  if (provider === 'deepseek') {
+    modelSel.style.display = 'block';
+    modelInp.style.display = 'none';
+    modelSel.innerHTML = PROVIDER_MODELS.deepseek.map(m => `<option value="${m}">${m}</option>`).join('');
+    modelSel.value = PROVIDER_MODELS.deepseek.includes(config.model.model) ? config.model.model : PROVIDER_MODELS.deepseek[0];
+    base.value = PROVIDER_ADDR.deepseek;
+    base.readOnly = true;
+    hint.textContent = 'DeepSeek 使用固定地址，无需手填。';
+  } else {
+    modelSel.style.display = 'none';
+    modelInp.style.display = 'block';
+    const isDeepseekModel = PROVIDER_MODELS.deepseek.includes(config.model.model);
+    modelInp.value = (!config.model.model || isDeepseekModel) ? '' : config.model.model;
+    let v = config.model.base_url || '';
+    if (!v || v === PROVIDER_ADDR.deepseek) v = CUSTOM_DEFAULT_ADDR;
+    base.value = v;
+    base.readOnly = false;
+    hint.textContent = '自定义 OpenAI 兼容：手动填写你自己的接口地址。';
+  }
+}
+
+function onProviderChange() {
+  config.model.provider = document.getElementById('m-provider').value;
+  renderModel();
+}
+
+async function saveModel() {
+  const provider = document.getElementById('m-provider').value;
+  config.model.provider = provider;
+  if (provider === 'deepseek') {
+    config.model.base_url = PROVIDER_ADDR.deepseek;
+    config.model.model = document.getElementById('m-model-select').value;
+  } else {
+    const base = document.getElementById('m-base-url').value.trim();
+    if (!base) { toast('请填写接口地址'); return; }
+    const model = document.getElementById('m-model').value.trim();
+    if (!model) { toast('请填写模型名'); return; }
+    config.model.base_url = base;
+    config.model.model = model;
+  }
+  await putConfig();
+}
+
+function syncChannelCheckbox() {
+  const local = document.getElementById('ch-local').checked;
+  if (local) {
+    ['ch-wxpusher','ch-qq','ch-email'].forEach(id => document.getElementById(id).checked = false);
+  }
+}
+
+function renderPush() {
+  const p = config.push;
+  document.getElementById('ch-wxpusher').checked = p.channels.includes('wxpusher');
+  document.getElementById('ch-qq').checked = p.channels.includes('qq_private');
+  document.getElementById('ch-email').checked = p.channels.includes('email');
+  document.getElementById('ch-local').checked = p.channels.length === 0;
+  document.getElementById('p-batch').value = p.batch_interval_minutes;
+  document.getElementById('p-quiet-enabled').checked = p.night_quiet.enabled;
+  document.getElementById('p-quiet-start').value = p.night_quiet.start;
+  document.getElementById('p-quiet-end').value = p.night_quiet.end;
+}
+
+async function savePush() {
+  const channels = [];
+  if (document.getElementById('ch-wxpusher').checked) channels.push('wxpusher');
+  if (document.getElementById('ch-qq').checked) channels.push('qq_private');
+  if (document.getElementById('ch-email').checked) channels.push('email');
+  config.push.channels = channels;
+  config.push.batch_interval_minutes = parseInt(document.getElementById('p-batch').value, 10) || 60;
+  config.push.night_quiet.enabled = document.getElementById('p-quiet-enabled').checked;
+  config.push.night_quiet.start = document.getElementById('p-quiet-start').value || '23:00';
+  config.push.night_quiet.end = document.getElementById('p-quiet-end').value || '08:00';
+  await putConfig();
+}
+
+async function putConfig() {
+  try {
+    config = await api('/api/config', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(config)
+    });
+    renderGroups();
+    renderGlobalSenders();
+    renderModel();
+    renderPush();
+    setupAutoRefresh();
+    toast('已保存，实时生效');
+  } catch (e) {
+    toast('保存失败：' + e.message);
+  }
+}
+
+function toggleNewGroup() {
+  document.getElementById('new-group-form').classList.toggle('show');
+}
+
+function createGroup() {
+  const id = parseInt(document.getElementById('new-group-id').value, 10);
+  const name = document.getElementById('new-group-name').value.trim();
+  if (!id) { toast('请输入群 QQ 号'); return; }
+  if ((config.groups || []).find(g => g.id === id)) { toast('该群已存在'); return; }
+  config.groups.push({
+    id: id,
+    name: name || ('群' + id),
+    enabled: true,
+    mode: 'keyword',
+    important_senders: [],
+    muted_senders: []
+  });
+  document.getElementById('new-group-id').value = '';
+  document.getElementById('new-group-name').value = '';
+  toggleNewGroup();
+  currentGroupId = id;
+  putConfig();
+}
+
+function toggleGroupEnabled() {
+  const g = currentGroup();
+  if (!g) return;
+  g.enabled = !g.enabled;
+  putConfig();
+}
+
+function deleteGroup() {
+  const g = currentGroup();
+  if (!g) return;
+  if (!confirm('确定删除群「' + (g.name || g.id) + '」？')) return;
+  config.groups = config.groups.filter(x => x.id !== g.id);
+  currentGroupId = (config.groups[0] || {}).id ?? null;
+  putConfig();
+}
+
+function onGroupChange() {
+  currentGroupId = parseInt(document.getElementById('group-select').value, 10);
+  renderGroupForm();
+}
+
+async function testPush() {
+  toast('正在发送测试提醒…');
+  try {
+    const data = await api('/api/push/test', {method: 'POST'});
+    const r = data.results || {};
+    const parts = Object.entries(r).map(([k,v]) => k + ': ' + (v[0] ? '成功' : '失败(' + v[1] + ')'));
+    toast(parts.join(' ｜ ') || '未开启提醒通道');
+  } catch (e) {
+    toast('测试提醒失败：' + e.message);
+  }
+}
+
+async function loadSecretStatus() {
+  try {
+    const data = await api('/api/secrets');
+    const conf = data.configured || {};
+    const vals = data.values || {};
+    document.querySelectorAll('input[data-key]').forEach(inp => {
+      const k = inp.dataset.key;
+      const isSens = inp.dataset.sensitive === '1';
+      const badge = document.querySelector(`[data-badge="${k}"]`);
+      const eye = document.querySelector(`[data-eye="${k}"]`);
+      if (isSens) {
+        inp.type = 'password';
+        inp.value = conf[k] ? MASK : '';
+        if (badge) badge.hidden = !conf[k];
+        if (eye) eye.hidden = !conf[k];
+        if (eye) eye.textContent = '显示';
+      } else {
+        inp.type = 'text';
+        inp.value = vals[k] || '';
+        if (badge) badge.hidden = true;
+        if (eye) eye.hidden = true;
+      }
+    });
+    secretDirty.clear();
+  } catch (e) { /* ignore */ }
+}
+
+async function toggleSecretReveal(key, btn) {
+  const inp = document.querySelector(`input[data-key="${key}"]`);
+  if (!inp) return;
+  if (inp.type === 'password') {
+    if (inp.value === MASK) {
+      try {
+        const d = await api('/api/secrets/reveal', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({key})
+        });
+        inp.value = d.value || '';
+      } catch (e) {
+        toast('读取失败：' + e.message);
+        return;
+      }
+    }
+    inp.type = 'text';
+    btn.textContent = '隐藏';
+  } else {
+    if (!secretDirty.has(key) && inp.value !== MASK) {
+      inp.value = MASK;
+    }
+    inp.type = 'password';
+    btn.textContent = '显示';
+  }
+}
+
+async function clearSecret(key) {
+  if (!confirm('确认清除 ' + key + '？')) return;
+  try {
+    await api('/api/secrets', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({[key]: ''})
+    });
+    await loadSecretStatus();
+    toast('已清除 ' + key + '，实时生效');
+  } catch (e) {
+    toast('清除失败：' + e.message);
+  }
+}
+
+async function saveSecrets() {
+  const payload = {};
+  document.querySelectorAll('input[data-key]').forEach(inp => {
+    const k = inp.dataset.key;
+    const isSens = inp.dataset.sensitive === '1';
+    const v = inp.value.trim();
+    if (isSens) {
+      if (secretDirty.has(k)) {
+        if (v === '' || v === MASK) {
+          toast('敏感项 ' + k + ' 留空不会清除，请用“清除”按钮');
+        } else {
+          payload[k] = v;
+        }
+      }
+    } else {
+      payload[k] = v;
+    }
+  });
+  if (!Object.keys(payload).length) { toast('没有需要保存的改动'); return; }
+  try {
+    await api('/api/secrets', {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    await loadSecretStatus();
+    toast('密钥已保存，实时生效');
+  } catch (e) {
+    toast('保存失败：' + e.message);
+  }
+}
+
+async function loadSnowStatus() {
+  try {
+    const s = await api('/api/snowluma/status');
+    renderSnowStatus(s);
+    return s;
+  } catch (e) {
+    return null;
+  }
+}
+
+function renderSnowStatus(s) {
+  const dot = document.getElementById('snow-dot');
+  const text = document.getElementById('snow-state-text');
+  const hint = document.getElementById('snow-hint');
+  const launcherEl = document.getElementById('snow-launcher');
+  const startBtn = document.getElementById('btn-start-snow');
+  const logEl = document.getElementById('snow-log');
+  let color, label, hintText;
+  if (s.state === 'connected') {
+    color = '#10b981'; label = '已连接';
+    hintText = 'SnowLuma 和 QQ 都已接入，可以去看今天的消息。';
+  } else if (s.state === 'qq_not_loaded') {
+    color = '#f59e0b'; label = '已启动但 QQ 未接入';
+    hintText = 'SnowLuma 在运行，但 QQ 进程还没接入。打开 SnowLuma 控制台，登录后重新载入 QQ 进程。';
+  } else {
+    color = '#94a3b8'; label = 'SnowLuma 未启动';
+    hintText = 'SnowLuma 没在运行。先在上面填目录再“启动 SnowLuma”，或手动打开后点“重新检测”。';
+  }
+  if (s.starting) label += '（正在启动…）';
+  dot.style.background = color;
+  text.textContent = label;
+  text.style.color = color;
+  hint.textContent = hintText;
+  startBtn.disabled = (s.state !== 'stopped') || s.starting;
+  const stopBtn = document.getElementById('btn-stop-snow');
+  if (stopBtn) stopBtn.disabled = (s.state === 'stopped');
+  launcherEl.textContent = s.launcher_path ? ('将使用：' + s.launcher_path) : '';
+  logEl.textContent = (s.log_tail && s.log_tail.length) ? s.log_tail.join('\n') : '（暂无日志）';
+  const mdot = document.getElementById('msg-status-dot');
+  if (mdot) { mdot.style.background = color; mdot.title = label; }
+  if (autoOpenSnow && (s.state === 'connected' || s.state === 'qq_not_loaded')) {
+    autoOpenSnow = false;
+    try { window.open('http://127.0.0.1:5099', '_blank', 'noopener'); } catch (e) { /* ignore */ }
+  }
+}
+
+async function startSnow() {
+  toast('正在启动 SnowLuma…');
+  autoOpenSnow = true;
+  try {
+    await api('/api/snowluma/start', {method: 'POST'});
+    await loadSnowStatus();
+  } catch (e) {
+    toast('启动失败：' + e.message);
+  }
+}
+
+async function saveSnowPath() {
+  config.snow_luma_dir = document.getElementById('snow-path').value.trim();
+  await putConfig();
+  await loadSnowStatus();
+}
+
+async function stopSnow() {
+  toast('正在停止监听…');
+  try {
+    await api('/api/snowluma/stop', {method: 'POST'});
+    await loadSnowStatus();
+    toast('已停止监听');
+  } catch (e) {
+    toast('停止失败：' + e.message);
+  }
+}
+
+async function exitSnow() {
+  if (!confirm('确定退出看板？退出后会停止看板服务。')) return;
+  try {
+    await api('/api/snowluma/exit', {method: 'POST'});
+  } catch (e) {
+    // 退出后连接会断, 忽略
+  }
+}
+
+async function saveCloseSnowToggle() {
+  config.close_snowluma_on_exit = document.getElementById('ch-close-snow').checked;
+  await putConfig();
+}
+
+function setupTips() {
+  document.querySelectorAll('.info-wrap').forEach(wrap => {
+    const btn = wrap.querySelector('.info-btn');
+    if (!btn) return;
+    btn.addEventListener('mouseenter', () => wrap.classList.add('show'));
+    btn.addEventListener('mouseleave', () => {
+      if (!wrap.classList.contains('open') && document.activeElement !== btn) wrap.classList.remove('show');
+    });
+    btn.addEventListener('focus', () => wrap.classList.add('show'));
+    btn.addEventListener('blur', () => {
+      if (!wrap.classList.contains('open')) wrap.classList.remove('show');
+    });
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = !wrap.classList.contains('open');
+      document.querySelectorAll('.info-wrap').forEach(w => w.classList.remove('open'));
+      if (willOpen) wrap.classList.add('open');
+    });
+  });
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.info-wrap.open').forEach(w => w.classList.remove('open'));
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.info-wrap').forEach(w => w.classList.remove('open', 'show'));
+      if (document.activeElement && document.activeElement.classList.contains('info-btn')) document.activeElement.blur();
+    }
+  });
+}
+
+let autoTimer = null;
+function setupAutoRefresh() {
+  if (autoTimer) clearInterval(autoTimer);
+  const sec = (config.dashboard && config.dashboard.refresh_seconds) || 30;
+  autoTimer = setInterval(loadMessages, sec * 1000);
+}
+
+async function init() {
+  try {
+    config = await api('/api/config');
+    if ((config.groups || []).length) currentGroupId = config.groups[0].id;
+    renderGroups();
+    renderGlobalSenders();
+    renderModel();
+    renderPush();
+    setupAutoRefresh();
+    await loadSecretStatus();
+    document.getElementById('snow-path').value = config.snow_luma_dir || '';
+    document.getElementById('ch-close-snow').checked = !!config.close_snowluma_on_exit;
+    setupTips();
+    const s = await loadSnowStatus();
+    const landView = (s && s.state === 'connected') ? 'view-messages' : 'view-snow';
+    switchView(landView, document.querySelector(`.nav-item[data-view="${landView}"]`));
+    await loadMessages();
+    setInterval(loadSnowStatus, 3000);
+    document.querySelectorAll('input[data-sensitive="1"]').forEach(inp => {
+      inp.addEventListener('input', () => {
+        if (inp.value !== MASK) secretDirty.add(inp.dataset.key);
+      });
+    });
+  } catch (e) {
+    document.getElementById('messages').innerHTML = '<div class="empty">初始化失败：'+escapeHtml(e.message)+'</div>';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

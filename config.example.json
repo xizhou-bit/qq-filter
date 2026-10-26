@@ -1,0 +1,36 @@
+{
+  "groups": [
+    {
+      "id": 1000000000,
+      "name": "示例群",
+      "enabled": true,
+      "mode": "keyword",
+      "keywords": ["作业", "考试", "截止", "讲座", "比赛", "报名"],
+      "important_senders": [],
+      "muted_senders": []
+    }
+  ],
+  "snow_luma_dir": "",
+  "close_snowluma_on_exit": false,
+  "global": {
+    "important_senders": [],
+    "muted_senders": []
+  },
+  "model": {
+    "provider": "deepseek",
+    "model": "deepseek-flash",
+    "base_url": "https://api.deepseek.com/chat/completions"
+  },
+  "push": {
+    "channels": ["wxpusher"],
+    "batch_interval_minutes": 60,
+    "night_quiet": {
+      "enabled": true,
+      "start": "23:00",
+      "end": "08:00"
+    }
+  },
+  "dashboard": {
+    "refresh_seconds": 30
+  }
+}
